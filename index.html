@@ -186,7 +186,15 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   $('contextMenu').addEventListener('click',e=>{const action=e.target.dataset.context;if(!action||!contextId)return;const id=contextId;hideContextMenu();act(id,action)});
   $('clearBtn').addEventListener('click',()=>{if(confirm('Clear every locally stored card? This cannot be undone.')){localStorage.removeItem(KEY);localStorage.removeItem(HISTORY_KEY);generatorExhausted=false;$('generatorWarning').hidden=true;$('generateBtn').disabled=false;reset();render();generate();toast('Local system cleared')}});
   function toast(message,bad=false){document.querySelector('.toast')?.remove();const el=document.createElement('div');el.className='toast'+(bad?' bad':'');el.setAttribute('role','status');el.textContent=message;document.body.appendChild(el);setTimeout(()=>el.remove(),2400)}
-  document.querySelectorAll('.section-tab').forEach(tab=>tab.addEventListener('click',()=>{document.body.dataset.view=tab.dataset.view;document.querySelectorAll('.section-tab').forEach(t=>t.classList.toggle('active',t===tab));}));
+  function switchView(view){
+    document.body.dataset.view=view;
+    const generatorPanel=document.querySelector('.generator'), managerPanel=document.querySelector('.manager');
+    generatorPanel.style.display=view==='generator'?'block':'none';
+    managerPanel.style.display=view==='manager'?'block':'none';
+    document.querySelectorAll('.section-tab').forEach(tab=>{const active=tab.dataset.view===view;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));});
+  }
+  document.querySelectorAll('.section-tab').forEach(tab=>tab.addEventListener('click',()=>switchView(tab.dataset.view)));
+  switchView('generator');
   generate();render();
 })();
 </script>

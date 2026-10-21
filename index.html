@@ -46,6 +46,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
     <section class="panel manager"><div class="panel-head"><div><div class="panel-kicker">02 / Manage</div><h3 class="panel-title">Print, activate & renew</h3><p class="panel-note">Records stay private in this browser.</p></div><div class="manager-head-actions"><button class="btn primary small" id="bulkGenerateBtn" type="button">Generate 10 cards</button><span class="badge" id="storageBadge">LOCAL</span></div></div><div class="panel-body"><form id="issueForm"><div class="form-grid"><div class="field"><label for="memberName">Member name</label><input id="memberName" required placeholder="First and last name"></div><div class="field"><label for="price">Price</label><input id="price" type="number" min="0" step="0.01" placeholder="5.00"></div><div class="field"><label for="issueDate">Print date</label><input id="issueDate" type="date" required></div><div class="field"><label for="serialInput">Serial number</label><input id="serialInput" required placeholder="Generate or paste serial"></div><div class="field full"><label for="notes">Internal note <span style="color:var(--gold-dim)">(optional)</span></label><input id="notes" maxlength="120" placeholder="Receipt, contact, or internal reference"></div></div><div class="form-actions"><button class="btn primary" id="saveBtn" type="submit">Issue new card</button><button class="btn" id="todayBtn" type="button">Use today</button><button class="btn" id="resetBtn" type="button">Reset</button></div></form><p class="hint"><b>Lifecycle:</b> new cards start inactive · activate only when handed to a member · active for 7 days · renewal/refund grace on days 8–10 · expired on day 11. Activation is permanent; it cannot be undone.</p><hr class="divider"><div class="toolbar"><input id="search" type="search" placeholder="Search name, serial, note…" aria-label="Search cards"><select id="filter" aria-label="Filter cards"><option value="all">All statuses</option><option value="inactive">Inactive stock</option><option value="active">Active</option><option value="grace">Renewal window</option><option value="expired">Expired</option><option value="refunded">Refunded</option></select></div><div class="selection-bar" id="selectionBar" hidden><label><input type="checkbox" id="selectAll"> Select all visible</label><span id="selectionCount">0 selected</span><button class="btn small" id="bulkActivate" type="button">Activate selected</button><button class="btn small danger" id="bulkDelete" type="button">Delete selected</button><button class="btn small" id="clearSelection" type="button">Clear</button></div><div class="cards" id="cards" aria-live="polite"></div></div></section>
   </main>
 </div>
+<div class="confirm-modal" id="confirmModal" hidden><div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="panel-kicker">Confirmation required</div><h3 id="confirmTitle">Confirm action</h3><p id="confirmMessage"></p><div class="confirm-actions"><button class="btn ghost" id="confirmCancel" type="button">Cancel</button><button class="btn primary" id="confirmOk" type="button">Continue</button></div></div></div><div class="context-menu" id="contextMenu" hidden><button data-context="copy">Copy serial</button><button data-context="activate">Activate card</button><button data-context="renew">Renew card</button><button data-context="refund">Refund card</button><button data-context="edit">Edit card</button><button data-context="delete">Delete card</button></div>
 <script>
 (() => {
   'use strict';
@@ -62,12 +63,18 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   const HISTORY_KEY='legacy_serial_history_v1';
   let generatorExhausted=false;
   function loadHistory(){try{const x=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');return new Set(Array.isArray(x)?x:[])}catch{return new Set()}}
-  function saveHistory(set){localStorage.setItem(HISTORY_KEY,JSON.stringify([...set]))}
+  function saveHistory(set){try{localStorage.setItem(HISTORY_KEY,JSON.stringify([...set]));return true}catch{toast('Could not save serial history',true);return false}}
   function usedSerials(){const used=loadHistory();load().forEach(c=>used.add(c.serial));return used}
   function showGeneratorWarning(){generatorExhausted=true;$('generatorWarning').hidden=false;$('generatorWarning').innerHTML='<strong>Serial generation is exhausted.</strong><br>No unused serial could be found in the current generation pool. Create a new generation card/version or clear local card data to reset this local pool.';$('generateBtn').disabled=true}
   fields.issue.value=today();
-  function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch{return[]}}
-  function save(items){localStorage.setItem(KEY,JSON.stringify(items))}
+  function normalizeCard(card,index=0){
+    if(!card || typeof card!=='object')return null;
+    const serial=String(card.serial||'').trim().toUpperCase();
+    if(!serial)return null;
+    return {id:String(card.id||`legacy_${Date.now()}_${index}`),name:String(card.name||'Unnamed member'),price:String(card.price||'0'),printed:String(card.printed||card.date||today()).slice(0,10),issue:String(card.issue||'').slice(0,10),serial,notes:String(card.notes||''),created:Number(card.created)||Date.now(),state:card.state==='refunded'?'refunded':(card.state==='active'&&card.issue?'active':'inactive'),activatedAt:String(card.activatedAt||''),renewedAt:String(card.renewedAt||''),refundedAt:String(card.refundedAt||'')};
+  }
+  function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x.map(normalizeCard).filter(Boolean):[]}catch{return[]}}
+  function save(items){try{localStorage.setItem(KEY,JSON.stringify(items.map(normalizeCard).filter(Boolean)));return true}catch{toast('Could not save local data',true);return false}}
   function randomString(length){
     const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const values=new Uint32Array(length); crypto.getRandomValues(values);
@@ -100,6 +107,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   }
   function render(){
     const all=load(), q=$('search').value.trim().toLowerCase(), wanted=$('filter').value;
+    const validIds=new Set(all.map(c=>c.id));[...selectedIds].forEach(id=>{if(!validIds.has(id))selectedIds.delete(id)});
     let shown=all.filter(c=>{const s=status(c);return(!q||[c.name,c.serial,c.notes,c.price].join(' ').toLowerCase().includes(q))&&(wanted==='all'||wanted===s)});
     shown.sort((a,b)=>b.created-a.created);
     $('cards').innerHTML=shown.length?shown.map(c=>{const s=status(c);return`<article class="saved ${s}" data-id="${esc(c.id)}"><div class="saved-main"><div class="saved-head"><label title="Select card"><input class="card-select" type="checkbox" data-select="${esc(c.id)}" ${selectedIds.has(c.id)?'checked':''}></label><span class="saved-name">${esc(c.name)}</span><span class="badge ${s}">${statusText(s)}</span></div><div class="saved-sub"><b>${esc(c.serial)}</b> · v1.0.0 · $${esc(c.price||'0')}</div><div class="expiry">${s==='inactive'?'Printed':'Activated'} <strong>${esc(s==='inactive'?(c.printed||'—'):c.issue)}</strong> · ${esc(daysLabel(c,s))}${c.notes?`<br>${esc(c.notes)}`:''}</div></div><div class="saved-actions"><button data-action="copy">Copy</button>${s==='inactive'?`<button data-action="activate">Activate</button>`:''}${s==='active'||s==='grace'?`<button data-action="renew">Renew</button>`:''}${s==='grace'?`<button data-action="refund">Refund</button>`:''}<button data-action="edit">Edit</button><button data-action="delete">Delete</button></div></article>`}).join(''):`<div class="empty"><strong>No cards found</strong>Issue a card above or change the search/filter.</div>`;
@@ -130,7 +138,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
     all.forEach(c=>{if(!selectedIds.has(c.id))return;if(action==='delete'){c._delete=true;changed++}else if(action==='activate'&&status(c)==='inactive'){c.state='active';c.issue=today();c.activatedAt=today();changed++}});
     save(action==='delete'?all.filter(c=>!c._delete):all);selectedIds.clear();toast(`${changed} card${changed===1?'':'s'} updated`);render();
   }
-  function showContextMenu(x,y){const menu=$('contextMenu');menu.hidden=false;menu.style.left=`${Math.min(x,window.innerWidth-185)}px`;menu.style.top=`${Math.min(y,window.innerHeight-260)}px`}
+  function showContextMenu(x,y){const menu=$('contextMenu');menu.hidden=false;menu.style.left=`${Math.max(8,Math.min(x,window.innerWidth-185))}px`;menu.style.top=`${Math.max(8,Math.min(y,window.innerHeight-260))}px`}
   function hideContextMenu(){ $('contextMenu').hidden=true;contextId=null }
   function updateStats(all){const counts=all.reduce((o,c)=>(o[status(c)]++,o),{inactive:0,active:0,grace:0,expired:0,refunded:0});$('statAll').textContent=all.length;$('statActive').textContent=counts.active;$('statGrace').textContent=counts.grace;$('statInactive').textContent=counts.inactive;$('statExpired').textContent=counts.expired+counts.refunded}
   async function act(id,action){
@@ -144,7 +152,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   }
   let confirmResolver=null;
   function askConfirm(message,title='Confirm action'){
-    return new Promise(resolve=>{confirmResolver=resolve;$('confirmTitle').textContent=title;$('confirmMessage').textContent=message;$('confirmModal').hidden=false;$('confirmOk').focus()});
+    return new Promise(resolve=>{if(confirmResolver)finishConfirm(false);confirmResolver=resolve;$('confirmTitle').textContent=title;$('confirmMessage').textContent=message;$('confirmModal').hidden=false;$('confirmOk').focus()});
   }
   function finishConfirm(result){if(!confirmResolver)return;const resolve=confirmResolver;confirmResolver=null;$('confirmModal').hidden=true;resolve(result)}
   $('confirmOk').addEventListener('click',()=>finishConfirm(true));$('confirmCancel').addEventListener('click',()=>finishConfirm(false));
@@ -153,7 +161,9 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   const LOCAL_BUILD='2026.10.21.06';
   const GITHUB_RAW='https://raw.githubusercontent.com/Vesluna/lcl/main/index.html';
   const GITHUB_PAGES='https://vesluna.github.io/lcl/';
+  let githubCheckInFlight=false;
   async function checkGitHubVersion(){
+    if(githubCheckInFlight)return;githubCheckInFlight=true;
     const statusEl=$('syncStatus'), warning=$('syncWarning');
     statusEl.textContent='Updates: checking…';statusEl.className='live sync-status';toast('Checking GitHub for updates…');warning.classList.remove('visible');
     try{
@@ -172,14 +182,14 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
         statusEl.textContent='Updates: up to date';statusEl.className='live sync-status ok';toast('Update check complete: app is up to date');
         warning.innerHTML='';warning.classList.remove('visible');
       }
-    }catch(error){statusEl.textContent='Updates: check failed';statusEl.className='live sync-status bad';toast('Update check failed',true);warning.innerHTML='<strong>Could not check GitHub.</strong><br>Check your connection or open the repository manually.';warning.classList.add('visible')}
+    }catch(error){statusEl.textContent='Updates: check failed';statusEl.className='live sync-status bad';toast('Update check failed',true);warning.innerHTML='<strong>Could not check GitHub.</strong><br>Check your connection or open the repository manually.';warning.classList.add('visible')}finally{githubCheckInFlight=false}
   }
   function reset(){editingId=null;$('issueForm').reset();fields.issue.value=today();$('saveBtn').textContent='Issue new card'}
   $('generateBtn').addEventListener('click',generate);
   $('copyBtn').addEventListener('click',async()=>{if(!generated)return toast('Generate a serial first',true);try{await navigator.clipboard.writeText(generated);toast('Serial copied')}catch{toast('Copy failed',true)}});
   $('useBtn').addEventListener('click',()=>{if(!generated)generate();fields.serial.value=generated;toast('Serial added to issue form')});
   $('todayBtn').addEventListener('click',()=>fields.issue.value=today());$('resetBtn').addEventListener('click',reset);
-  $('issueForm').addEventListener('submit',e=>{e.preventDefault();const all=load(), serial=fields.serial.value.trim().toUpperCase();if(!fields.name.value.trim()||!serial)return toast('Name and serial are required',true);if(!/^([A-Z0-9]{4}-){3}[A-Z0-9]{4}$/.test(serial))return toast('Use a 4–4–4–4 serial format',true);if(all.some(c=>c.serial===serial&&c.id!==editingId))return toast('Serial already exists',true);const existing=editingId?all.find(c=>c.id===editingId):null;const history=usedSerials();history.add(serial);saveHistory(history);const data={id:editingId||`c_${Date.now()}_${randomString(5)}`,name:fields.name.value.trim(),price:fields.price.value||'0',printed:existing?.printed||fields.issue.value||today(),issue:existing?.issue||'',serial,notes:fields.notes.value.trim(),created:existing?.created||Date.now(),state:existing?.state||'inactive',activatedAt:existing?.activatedAt||''};const next=editingId?all.map(c=>c.id===editingId?{...c,...data}:c):[...all,data];save(next);toast(editingId?'Card updated':'Card issued');reset();render()});
+  $('issueForm').addEventListener('submit',e=>{e.preventDefault();const all=load(), serial=fields.serial.value.trim().toUpperCase();if(!fields.name.value.trim()||!serial)return toast('Name and serial are required',true);if(!/^([A-Z0-9]{4}-){3}[A-Z0-9]{4}$/.test(serial))return toast('Use a 4–4–4–4 serial format',true);const existing=editingId?all.find(c=>c.id===editingId):null;const history=usedSerials();if(history.has(serial)&&(!existing||existing.serial!==serial))return toast('Serial has already existed and cannot be reused',true);const historyBefore=usedSerials();historyBefore.add(serial);saveHistory(historyBefore);const data={id:editingId||`c_${Date.now()}_${randomString(5)}`,name:fields.name.value.trim(),price:fields.price.value||'0',printed:existing?.printed||fields.issue.value||today(),issue:existing?.issue||'',serial,notes:fields.notes.value.trim(),created:existing?.created||Date.now(),state:existing?.state||'inactive',activatedAt:existing?.activatedAt||''};const next=editingId?all.map(c=>c.id===editingId?{...c,...data}:c):[...all,data];save(next);toast(editingId?'Card updated':'Card issued');reset();render()});
   $('search').addEventListener('input',render);$('filter').addEventListener('change',render);
   $('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(load(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`legacy-card-backup-${today()}.json`;a.click();URL.revokeObjectURL(url);toast('Backup exported')});
   $('importBtn').addEventListener('click', () => {
@@ -234,7 +244,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
   setInterval(checkGitHubVersion, 60000);
 })();
 </script>
-<div class="confirm-modal" id="confirmModal" hidden><div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="panel-kicker">Confirmation required</div><h3 id="confirmTitle">Confirm action</h3><p id="confirmMessage"></p><div class="confirm-actions"><button class="btn ghost" id="confirmCancel" type="button">Cancel</button><button class="btn primary" id="confirmOk" type="button">Continue</button></div></div></div>
-<div class="context-menu" id="contextMenu" hidden><button data-context="copy">Copy serial</button><button data-context="activate">Activate card</button><button data-context="renew">Renew card</button><button data-context="refund">Refund card</button><button data-context="edit">Edit card</button><button data-context="delete">Delete card</button></div>
+
+
 </body>
 </html>

@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LEGACY Card Lab</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070707;
+    --panel:#0f0f10;
+    --gold:#d4af37;
+    --muted:#9a958f;
+    --glass: rgba(255,255,255,0.03);
+    --success:#36c36b;
+    --danger:#e34b4b;
+    --card-radius:14px;
+    --shadow: 0 8px 30px rgba(0,0,0,0.7);
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%;}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto;
+    background: linear-gradient(180deg, #050505 0%, #0b0b0b 60%);
+    color:#eee;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:clamp(12px, 3vw, 32px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:24px;
+    user-select: none;
+    overflow:auto;
+  }
+  input, textarea, .serial-text, .meta { user-select: text; }
+  .app {
+    width:100%;
+    position:relative;
+    max-width:1000px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:18px;
+    padding:20px;
+    box-shadow:var(--shadow);
+    border:1px solid rgba(212,175,55,0.06);
+  }
+  header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .brand {
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .logo {
+    width:54px;
+    height:54px;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--gold),#b3892b);
+    display:grid;
+    place-items:center;
+    color:#041214;
+    font-weight:800;
+    box-shadow: 0 6px 20px rgba(212,175,55,0.15);
+  }
+  h1 {margin:0;font-size:18px;letter-spacing:0.6px}
+  p.small {margin:0;color:var(--muted);font-size:13px}
+  /* Tabs */
+  .tabs {
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .tab {
+    padding:8px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+    color:var(--muted);
+    transition:all .22s cubic-bezier(.2,.9,.3,1);
+    border:1px solid transparent;
+    background:transparent;
+  }
+  .tab.active{
+    color:#071014;
+    background: linear-gradient(180deg, var(--gold), #b3892b);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  }
+  main {
+    display:flex;
+    gap:20px;
+  }
+  /* Left: Generator area */
+  .panel {
+    flex:1.1;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:var(--card-radius);
+    padding:18px;
+    border:1px solid rgba(255,255,255,0.02);
+    min-height:480px;
+  }
+  .panel h2 {margin:0 0 6px 0}
+  .panel p.lead {margin:0;color:var(--muted);font-size:13px;margin-bottom:12px}
+  .versions {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:12px;
+  }
+  .card {
+    border-radius:12px;
+    padding:14px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.12));
+    border:2px solid rgba(255,255,255,0.02);
+    transition:transform .25s cubic-bezier(.2,.9,.3,1), box-shadow .25s;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    position:relative;
+    overflow:hidden;
+  }
+  .card:hover{transform:translateY(-6px); box-shadow: 0 18px 40px rgba(0,0,0,0.7)}
+  .card .top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .card .version {
+    font-weight:700;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .serial-box {
+    margin-top:6px;
+    padding:14px;
+    border-radius:10px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+    letter-spacing:2px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.2));
+    border:1px solid rgba(255,255,255,0.02);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .serial-text {
+    font-size:16px;
+    color:var(--gold);
+    font-weight:800;
+    user-select: text;
+  }
+  .serial-actions button {
+    padding:8px 10px;
+    border-radius:8px;
+    border:0;
+    cursor:pointer;
+    font-weight:700;
+    background:rgba(255,255,255,0.03);
+    color:var(--muted);
+    transition:all .18s;
+  }
+  .serial-actions button:hover{transform:translateY(-3px)}
+  /* Status styles */
+  .card.current { border-color: rgba(212,175,55,0.36); animation: gold-glow 2s infinite alternate; }
+  .card.current .tag {
+    color:#071014;
+    background:var(--gold);
+    border-radius:8px;
+    padding:6px 8px;
+    font-weight:800;
+    font-size:12px;
+    box-shadow: 0 6px 18px rgba(212,175,55,0.08);
+  }
+  .card.outdated { border-color: rgba(227,75,75,0.28); animation: red-pulse 1.5s infinite; }
+  .card.outdated .tag {
+    color:#fff;
+    background: rgba(227,75,75,0.95);
+    border-radius:8px;
+    padding:6px 8px;
+    font-weight:800;
+    font-size:12px;
+  }
+  .muted-note { font-size:12px;color:var(--muted);margin-top:10px }
+  .controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap }
+  .btn {
+    padding:9px 12px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.03);
+    background:transparent;
+    color:var(--gold);
+    cursor:pointer;
+    font-weight:800;
+    letter-spacing:0.6px;
+    transition:all .18s;
+  }
+  .btn.warn { color:var(--danger); border-color:rgba(227,75,75,0.12) }
+  .btn:focus-visible, .tab:focus-visible, input:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+  .btn:hover { background:rgba(212,175,55,0.09); transform:translateY(-2px); }
+  .btn.warn:hover { background:rgba(227,75,75,0.09); }
+  /* Right: Manager */
+  .panel.side {
+    width:360px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.08));
+    border-radius:var(--card-radius);
+    padding:16px;
+    border:1px solid rgba(255,255,255,0.02);
+    min-height:480px;
+  }
+  .side h3 {margin:0 0 6px 0}
+  .form-row {display:flex;gap:8px;margin-bottom:8px}
+  input[type="text"], input[type="date"], select {
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.04);
+    background:transparent;
+    color:#fff;
+    outline:none;
+    font-size:13px;
+  }
+  .tiny {font-size:12px;color:var(--muted);margin-bottom:10px}
+  .list {
+    margin-top:12px;
+    max-height:260px;
+    overflow:auto;
+    padding-right:6px;
+  }
+  .saved {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:8px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.06));
+    border:1px solid rgba(255,255,255,0.02);
+    transition:transform .18s;
+  }
+  .saved.expired {
+    border-color: rgba(227,75,75,0.28);
+    animation: red-pulse 1.5s infinite;
+  }
+  .saved:hover{transform:translateY(-4px)}
+  .saved .meta {font-size:13px}
+  .saved .meta .name {font-weight:700;color:var(--gold)}
+  .saved .meta .sub {color:var(--muted);font-size:12px;margin-top:2px}
+  .saved .actions button {
+    background:transparent;border:0;color:var(--muted);cursor:pointer;font-weight:700;padding:6px 8px;border-radius:8px;
+  }
+  .expired-tag {
+    color:#fff;
+    background: rgba(227,75,75,0.95);
+    border-radius:8px;
+    padding:6px 8px;
+    font-weight:800;
+    font-size:12px;
+    margin-top:4px;
+  }
+  .expired-note {
+    font-size:12px;
+    color:var(--danger);
+    margin-top:4px;
+  }
+  .search {display:flex;gap:8px;margin-bottom:10px}
+  .search input {flex:1}
+  /* small utility */
+  .small {font-size:12px;color:var(--muted)}
+  .fade-in {animation:fadeIn .6s both}
+  @keyframes fadeIn {from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  @keyframes gold-glow {from{box-shadow:0 0 10px rgba(212,175,55,0.2)} to{box-shadow:0 0 20px rgba(212,175,55,0.4)}}
+  @keyframes red-pulse {0%{box-shadow:0 0 10px rgba(227,75,75,0.2)} 50%{box-shadow:0 0 20px rgba(227,75,75,0.4)} 100%{box-shadow:0 0 10px rgba(227,75,75,0.2)}}
+  @keyframes pulse {0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)}}
+  /* subtle floating bg ornament */
+  .bg-orn {
+    position:absolute;
+    right:-140px;
+    top:-60px;
+    width:320px;height:320px;
+    background: radial-gradient(circle at 30% 30%, rgba(212,175,55,0.06), transparent 25%),
+                radial-gradient(circle at 70% 70%, rgba(212,175,55,0.03), transparent 15%);
+    filter: blur(24px);
+    pointer-events:none;
+  }
+  /* responsive */
+  @media (max-width:980px){
+    body { align-items:flex-start; }
+    main {flex-direction:column;}
+    .panel.side{width:100%}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
+  @media (max-height:800px) {
+    .panel { min-height: auto; }
+    .list { max-height: 180px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="Legacy Card Lab">
+  <div class="bg-orn" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <div class="logo">LG</div>
+      <div>
+        <h1>LEGACY Card Lab</h1>
+        <p class="small">Black & Gold — Serial generator & local card manager</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" type="button" data-tab="gen" role="tab" aria-selected="true" aria-controls="tab-gen">Generator</button>
+      <button class="tab" type="button" data-tab="mgr" role="tab" aria-selected="false" aria-controls="tab-mgr">Card Manager</button>
+    </nav>
+  </header>
+  <main>
+    <!-- LEFT: Generator -->
+    <section class="panel" id="tab-gen" role="tabpanel">
+      <h2>For Card Version: <span id="active-version-label">1.0.0</span></h2>
+      <p class="lead">Pick a card version below. Gold = current. Red = out of date. Generate serials that have unique patterns.</p>
+      <div class="versions" id="versions">
+      </div>
+    </section>
+    <!-- RIGHT: Manager -->
+    <aside class="panel side" id="tab-mgr" role="tabpanel" aria-hidden="true" style="display:none;">
+      <h3>Card Manager — SAVES LOCALLY</h3>
+      <p class="tiny">Add members, search, and store cards in your browser. Data stays local to this device.</p>
+      <div class="search">
+        <input id="search-input" type="search" placeholder="Search by name, serial or version" aria-label="Search saved cards" />
+        <button class="btn" id="clear-search">Clear</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn" id="import-json">Import JSON</button>
+        <button class="btn" id="export-json">Export JSON</button>
+        <button class="btn warn" id="clear-all">Clear All</button>
+      </div>
+      <form id="save-form" onsubmit="return false;">
+        <div class="form-row">
+          <input type="text" id="name" placeholder="First and last name" required />
+        </div>
+        <div class="form-row">
+          <input type="date" id="date-today" />
+          <input type="date" id="exp-date" />
+        </div>
+        <div class="form-row">
+          <input type="text" id="card-version" placeholder="Card Version (e.g. 1.0.0)" />
+        </div>
+        <div class="form-row">
+          <input type="number" id="price" min="0" step="0.01" inputmode="decimal" placeholder="Membership price (e.g. 5)" />
+        </div>
+        <div class="form-row">
+          <input type="text" id="card-serial" placeholder="Card Serial (use GEN from generator)" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="save-btn">Save Card</button>
+          <button class="btn" id="prefill-btn">Prefill Today's Date</button>
+          <button class="btn" id="auto-expire-btn">Auto 1-Year Expire</button>
+        </div>
+      </form>
+      <div class="list" id="saved-list" aria-live="polite"></div>
+      <p class="small" style="margin-top:10px">Legacy edition - clean, minimal, and private to this browser. Total cards: <span id="card-count">0</span></p>
+    </aside>
+  </main>
+</div>
+<script>
+/* ---------- Helper / Serial generation ---------- */
+const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+function randomChar(){ return CHARSET.charAt(Math.floor(Math.random()*CHARSET.length)); }
+function generateSerialPattern(groups){
+  return groups.map(len => {
+    let s = '';
+    for(let i=0;i<len;i++){ s += randomChar(); }
+    return s;
+  }).join('-');
+}
+/* ---------- UI wiring ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  function setActiveTab(target){
+    tabs.forEach(x => {
+      const active = x.dataset.tab === target;
+      x.classList.toggle('active', active);
+      x.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('[role="tabpanel"]').forEach(p => {
+      if(p.id === 'tab-' + target) {
+        p.style.display = 'block';
+        p.setAttribute('aria-hidden','false');
+      } else {
+        p.style.display = 'none';
+        p.setAttribute('aria-hidden','true');
+      }
+    });
+  }
+  tabs.forEach(t => t.addEventListener('click', () => setActiveTab(t.dataset.tab)));
+  tabs.forEach(t => t.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+      e.preventDefault();
+      const next = e.key === 'ArrowRight' ? t.nextElementSibling || tabs[0] : t.previousElementSibling || tabs[tabs.length - 1];
+      next.focus();
+      next.click();
+    }
+  }));
+  // Prefill today's date input
+  const todayInput = document.getElementById('date-today');
+  const localDate = (date = new Date()) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0,10);
+  };
+  const todayIso = localDate();
+  todayInput.value = todayIso;
+  // Define generator cards as object for easy addition
+  const generatorCards = {
+    '1.0.0': { version: '1.0.0', groups: [4,4,2,3], current: true, note: 'Primary LEGACY version', tag: 'CURRENT' },
+    '0.1.8': { version: '0.1.8', groups: [4,4], current: false, note: 'Test Version', tag: 'OUT OF DATE' }
+    // Add more like: '1.2.0': { version: '1.2.0', groups: [4,4,2,3], current: false, note: 'New version', tag: 'OUT OF DATE' }
+  };
+  // Convert to array for rendering
+  const versions = Object.values(generatorCards);
+  // Generate cards from JS
+  const versionsContainer = document.getElementById('versions');
+  versions.forEach((v, index) => {
+    const card = document.createElement('div');
+    const status = v.current ? 'current' : 'outdated';
+    card.className = `card ${status} fade-in`;
+    card.dataset.version = v.version;
+    card.dataset.groups = v.groups.join(',');
+    card.style.animationDelay = `${index * 0.2}s`;
+    card.innerHTML = `
+      <div class="top">
+        <div>
+          <div class="version">Generate Serial for Card Version <strong>${v.version}</strong></div>
+          <div class="muted-note">${v.note}</div>
+        </div>
+        <div class="tag">${v.tag}</div>
+      </div>
+      <div class="serial-box">
+        <div class="serial-text" data-serial>${generateSerialPattern(v.groups)}</div>
+        <div class="serial-actions">
+          <button class="btn" type="button" data-action="gen" aria-label="Generate a new serial">Generate</button>
+          <button class="btn" type="button" data-action="copy">Copy</button>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn" type="button" data-action="save">Save to Manager</button>
+        <button class="btn warn" type="button" data-action="toggle">${v.current ? 'Mark Out-of-date' : 'Mark Current'}</button>
+      </div>
+    `;
+    // Hook buttons
+    const genBtn = card.querySelector('[data-action="gen"]');
+    const copyBtn = card.querySelector('[data-action="copy"]');
+    const saveBtn = card.querySelector('[data-action="save"]');
+    const toggleBtn = card.querySelector('[data-action="toggle"]');
+    const serialEl = card.querySelector('[data-serial]');
+    genBtn.addEventListener('click', () => {
+      const groups = card.dataset.groups.split(',').map(Number);
+      const s = generateSerialPattern(groups);
+      serialEl.textContent = s;
+      document.getElementById('active-version-label').textContent = v.version;
+      serialEl.parentElement.animate([{transform: 'scale(1.05)'}, {transform: 'scale(1)'}], {duration: 300, easing: 'ease-in-out'});
+    });
+    copyBtn.addEventListener('click', async () => {
+      const txt = serialEl.textContent.trim();
+      if(txt === '' || txt.includes('----')) {
+        flash(card, 'Generate a serial first');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(txt);
+        flash(card, 'Copied to clipboard', 1200);
+        copyBtn.animate([{color: 'var(--success)'}], {duration: 500});
+      } catch(e){
+        flash(card, 'Unable to copy', 1200);
+      }
+    });
+    saveBtn.addEventListener('click', () => {
+      const s = serialEl.textContent.trim();
+      if(s === '' || s.includes('----')) { flash(card,'Generate a serial first'); return; }
+      document.getElementById('card-serial').value = s;
+      document.getElementById('card-version').value = v.version;
+      if (v.version === '1.0.0') {
+        document.getElementById('price').value = '5';
+      }
+      document.querySelector('.tab[data-tab="mgr"]').click();
+      flash(document.getElementById('save-btn'),'Ready to save');
+      saveBtn.animate([{background: 'rgba(212,175,55,0.1)'}], {duration: 400});
+    });
+    toggleBtn.addEventListener('click', () => {
+      const isOutdated = card.classList.contains('outdated');
+      if (isOutdated) {
+        // Setting to current - enforce only one
+        document.querySelectorAll('.card.current').forEach(other => {
+          if (other !== card) {
+            other.classList.remove('current');
+            other.classList.add('outdated');
+            other.querySelector('.tag').textContent = 'OUT OF DATE';
+            other.querySelector('.muted-note').textContent = 'Not the current version';
+            other.querySelector('[data-action="toggle"]').textContent = 'Mark Current';
+          }
+        });
+        card.classList.remove('outdated');
+        card.classList.add('current');
+        card.querySelector('.tag').textContent = 'CURRENT';
+        card.querySelector('.muted-note').textContent = 'Primary LEGACY version';
+        toggleBtn.textContent = 'Mark Out-of-date';
+      } else {
+        card.classList.remove('current');
+        card.classList.add('outdated');
+        card.querySelector('.tag').textContent = 'OUT OF DATE';
+        card.querySelector('.muted-note').textContent = 'Not the current version';
+        toggleBtn.textContent = 'Mark Current';
+      }
+      card.animate([{opacity: 0.5}, {opacity: 1}], {duration: 300});
+    });
+    versionsContainer.appendChild(card);
+  });
+  /* ---------- Manager: save, list, search ---------- */
+  const storageKey = 'legacy_cards_v1';
+  const listEl = document.getElementById('saved-list');
+  const cardCountEl = document.getElementById('card-count');
+  let editingId = null;
+  function loadCards(){
+    try{
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+  function saveCards(arr){
+    localStorage.setItem(storageKey, JSON.stringify(arr));
+  }
+  function updateCardCount() {
+    const count = loadCards().length;
+    cardCountEl.textContent = count;
+  }
+  function renderList(filter = ''){
+    const out = loadCards();
+    const q = filter.trim().toLowerCase();
+    listEl.innerHTML = '';
+    const today = localDate();
+    const currentVersion = Object.keys(generatorCards).find(key => generatorCards[key].current === true);
+    const filtered = out.filter(card => {
+      if(!q) return true;
+      return (card.name && card.name.toLowerCase().includes(q)) ||
+             (card.serial && card.serial.toLowerCase().includes(q)) ||
+             (card.version && card.version.toLowerCase().includes(q));
+    });
+    if(filtered.length === 0){
+      listEl.innerHTML = '<div class="small" style="opacity:0.7;padding:14px 8px;">No matching cards yet. Save a card or import a JSON backup to get started.</div>';
+      updateCardCount();
+      return;
+    }
+    filtered.reverse().forEach((card, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'saved fade-in';
+      wrap.style.animationDelay = `${idx * 0.1}s`;
+      wrap.dataset.id = card.id;
+      let isExpired = false;
+      let expiredHtml = '';
+      let expDisplay = card.exp || '—';
+      if (card.version !== currentVersion) {
+        isExpired = true;
+        expiredHtml = `
+          <div class="expired-tag">OUT OF DATE/EXPIRED</div>
+          <div class="expired-note">The cards version has expired.</div>
+        `;
+        expDisplay = 'None';
+      } else if (card.exp && card.exp <= today) {
+        isExpired = true;
+        expiredHtml = `
+          <div class="expired-tag">EXPIRED</div>
+          <div class="expired-note">Ask Person To Pay To Renew Subscription</div>
+        `;
+      }
+      if (isExpired) {
+        wrap.classList.add('expired');
+      }
+      wrap.innerHTML = `
+        <div class="meta">
+          <div class="name">${escapeHtml(card.name)}</div>
+          <div class="sub">${escapeHtml(card.version)} • Expires: ${escapeHtml(expDisplay)}</div>
+          <div class="sub">Price: $${escapeHtml(card.price || 'N/A')}</div>
+          <div class="sub" style="margin-top:6px;font-family:ui-monospace,monospace">${escapeHtml(card.serial)}</div>
+          ${expiredHtml}
+        </div>
+        <div class="actions">
+          <button data-act="copy">Copy</button>
+          <button data-act="edit">Edit</button>
+          <button data-act="del">Delete</button>
+        </div>
+      `;
+      // actions
+      wrap.querySelector('[data-act="copy"]').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(card.serial);
+          flash(wrap, 'Serial copied');
+          wrap.animate([{transform: 'scale(1.02)'}, {transform: 'scale(1)'}], {duration: 300});
+        } catch { flash(wrap, 'Copy failed') }
+      });
+      wrap.querySelector('[data-act="edit"]').addEventListener('click', () => {
+        editingId = card.id;
+        document.getElementById('name').value = card.name;
+        document.getElementById('date-today').value = card.date;
+        document.getElementById('exp-date').value = card.exp || '';
+        document.getElementById('card-version').value = card.version;
+        document.getElementById('price').value = card.price || '';
+        document.getElementById('card-serial').value = card.serial;
+        document.getElementById('save-btn').textContent = 'Update Card';
+        flash(wrap, 'Editing mode');
+      });
+      wrap.querySelector('[data-act="del"]').addEventListener('click', () => {
+        if(!confirm(`Delete the card for ${card.name || 'this member'}?`)) return;
+        const arr = loadCards();
+        arr.splice(arr.findIndex(c=>c.id === card.id),1);
+        saveCards(arr);
+        renderList(document.getElementById('search-input').value);
+        wrap.animate([{opacity: 1}, {opacity: 0, transform: 'translateX(20px)'}], {duration: 400}).onfinish = () => wrap.remove();
+      });
+      listEl.appendChild(wrap);
+    });
+    updateCardCount();
+  }
+  // Utility escape
+  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const name = document.getElementById('name').value.trim();
+    const dateToday = document.getElementById('date-today').value;
+    const exp = document.getElementById('exp-date').value;
+    const version = document.getElementById('card-version').value.trim();
+    const serial = document.getElementById('card-serial').value.trim();
+    const price = document.getElementById('price').value.trim();
+    if(!name || !serial){
+      flash(document.getElementById('save-btn'), 'Name and serial required');
+      return;
+    }
+    const arr = loadCards();
+    const existingSerial = arr.find(c => c.serial === serial && c.id !== editingId);
+    if (existingSerial) {
+      flash(document.getElementById('save-btn'), 'Serial must be unique');
+      return;
+    }
+    if (editingId) {
+      const index = arr.findIndex(c => c.id === editingId);
+      if (index !== -1) {
+        arr[index] = {
+          id: editingId,
+          name, date: dateToday || localDate(), exp, version: version || 'unknown', serial, price: price || '0'
+        };
+        saveCards(arr);
+        renderList();
+        flash(document.getElementById('save-btn'), 'Updated ✔');
+        editingId = null;
+        document.getElementById('save-btn').textContent = 'Save Card';
+      }
+    } else {
+      const item = {
+        id: 'c_' + Date.now() + '_' + Math.floor(Math.random()*9999),
+        name, date: dateToday || localDate(), exp, version: version || 'unknown', serial, price: price || '0'
+      };
+      arr.push(item);
+      saveCards(arr);
+      renderList();
+      flash(document.getElementById('save-btn'), 'Saved ✔');
+    }
+    // clear form
+    document.getElementById('name').value = '';
+    document.getElementById('card-serial').value = '';
+    document.getElementById('card-version').value = '';
+    document.getElementById('exp-date').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('date-today').value = localDate();
+    editingId = null;
+    document.getElementById('save-btn').textContent = 'Save Card';
+    document.getElementById('save-form').animate([{background: 'rgba(54,195,107,0.1)'}, {background: 'transparent'}], {duration: 600});
+  });
+  document.getElementById('prefill-btn').addEventListener('click', () => {
+    document.getElementById('date-today').value = localDate();
+    flash(document.getElementById('prefill-btn'), "Today's date set");
+  });
+  document.getElementById('auto-expire-btn').addEventListener('click', () => {
+    const rawIssueDate = document.getElementById('date-today').value;
+    const issueDate = rawIssueDate ? new Date(rawIssueDate + 'T12:00:00') : new Date();
+    const expireDate = new Date(issueDate);
+    expireDate.setFullYear(expireDate.getFullYear() + 1);
+    document.getElementById('exp-date').value = localDate(expireDate);
+    flash(document.getElementById('auto-expire-btn'), '1-year expiration set');
+  });
+  // Search
+  document.getElementById('search-input').addEventListener('input', e => {
+    renderList(e.target.value);
+  });
+  document.getElementById('clear-search').addEventListener('click', () => {
+    document.getElementById('search-input').value = '';
+    renderList();
+  });
+  // Import/Export/Clear
+  document.getElementById('export-json').addEventListener('click', () => {
+    const out = loadCards();
+    const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'legacy-cards.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('import-json').addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'application/json';
+    inp.onchange = (ev) => {
+      const f = ev.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          if(Array.isArray(imported)){
+            const arr = loadCards();
+            const uniques = new Set(arr.map(c => c.serial));
+            imported.forEach(it=>{
+              if(it && typeof it === 'object' && String(it.serial || '').trim() && !uniques.has(String(it.serial).trim())){
+                const clean = {
+                  id: it.id || ('c_' + Date.now() + '_' + Math.floor(Math.random()*9999)),
+                  name: String(it.name || 'Unnamed member').trim(),
+                  date: String(it.date || localDate()).slice(0,10),
+                  exp: String(it.exp || '').slice(0,10),
+                  version: String(it.version || 'unknown').trim(),
+                  serial: String(it.serial).trim(),
+                  price: String(it.price || '0').trim()
+                };
+                arr.push(clean);
+                uniques.add(clean.serial);
+              }
+            });
+            saveCards(arr);
+            renderList();
+            flash(document.getElementById('import-json'),'Imported (duplicates skipped)');
+          } else flash(document.getElementById('import-json'),'File invalid');
+        } catch(e){ flash(document.getElementById('import-json'),'Import error') }
+      };
+      reader.readAsText(f);
+    };
+    inp.click();
+  });
+  document.getElementById('clear-all').addEventListener('click', () => {
+    if(!confirm('Clear ALL saved cards? This cannot be undone.')) return;
+    localStorage.removeItem(storageKey);
+    renderList();
+  });
+  // initial render
+  renderList();
+  // Tiny flash helper
+  function flash(el, msg = '', ms = 900){
+    const node = typeof el === 'string' ? document.querySelector(el) : el;
+    const tip = document.createElement('div');
+    tip.style.position = 'absolute';
+    tip.style.right = '14px';
+    tip.style.top = '8px';
+    tip.style.padding = '6px 10px';
+    tip.style.borderRadius = '8px';
+    tip.style.background = 'rgba(0,0,0,0.6)';
+    tip.style.color = 'white';
+    tip.style.fontSize = '12px';
+    tip.style.zIndex = 9999;
+    tip.style.pointerEvents = 'none';
+    tip.setAttribute('role','status');
+    tip.setAttribute('aria-live','polite');
+    tip.textContent = msg;
+    node.style.position = 'relative';
+    node.appendChild(tip);
+    setTimeout(()=>{ tip.remove(); }, ms);
+  }
+});
+</script>
+</body>
+</html>

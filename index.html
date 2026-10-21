@@ -63,7 +63,7 @@ const KEY='legacy_card_ops_v3', HISTORY_KEY='legacy_serial_history_v1', VERSION=
 // Add a future production generator here, then change SELECTED_GENERATOR_KEY.
 // Do not alter existing definitions: saved cards retain their original key/version.
 const GENERATOR_DEFINITIONS=Object.freeze({
-  'legacy-v1':Object.freeze({name:'LEGACY',version:'1.0.0',charset:'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',length:16,groups:[4,4,4,4],separator:'-',format:'4–4–4–4'})
+  'legacy-v1':Object.freeze({name:'LEGACY',version:'1.0.0',charset:'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',length:16,groups:[4,4,2,3],separator:'-',format:'4–4–2–3'})
 });
 const SELECTED_GENERATOR_KEY='legacy-v1';
 const selectedGenerator=()=>GENERATOR_DEFINITIONS[SELECTED_GENERATOR_KEY];
